@@ -2,6 +2,8 @@
 
 A macOS memory map tracker that monitors process memory regions and displays metrics such as fragmentation depth and region distribution
 
+![Memory Map](screenshots/memory-map.png)
+
 ## Usage
 
 Build the project:
