@@ -1,8 +1,20 @@
 # memory-map
 
-A macOS memory map tracker that monitors process memory regions and displays metrics such as fragmentation depth and region distribution
+A macOS memory map tracker that monitors process memory regions and displays realtime metrics such as resident/virtual memory deltas and global VM statistics.
 
 ![Memory Map](screenshots/memory-map.png)
+
+## Metrics Explained
+
+**Target Process Metrics**
+- **Mapped Regions**: Number of distinct memory segments mapped by the process.
+- **Resident Delta**: Change in actual physical RAM used (RSS).
+- **Virtual Delta**: Change in total address space allocated (VSZ).
+
+**macOS Global VM Stats**
+- **Active**: Physical memory currently in use.
+- **Compressed**: Memory compressed by macOS to free up RAM.
+- **Wired**: Core system memory locked in physical RAM.
 
 ## Usage
 
