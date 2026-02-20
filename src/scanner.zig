@@ -9,8 +9,8 @@ const c = @cImport({
 pub const Scanner = struct {
     task_port: c.mach_port_t,
     shared: *state.SharedState,
-    prev_rss: u64 = 0,
-    prev_vms: u64 = 0,
+    prev_resident: u64 = 0,
+    prev_virtual: u64 = 0,
 
     prev_regions: std.ArrayListUnmanaged(state.MemoryRegion) = .{},
     next_regions: std.ArrayListUnmanaged(state.MemoryRegion) = .{},
@@ -30,9 +30,7 @@ pub const Scanner = struct {
         self.next_regions.clearRetainingCapacity();
 
         var address: c.mach_vm_address_t = 0;
-        const now: i64 = @intCast(std.time.nanoTimestamp());
         var depth: c.natural_t = 1;
-        var prev_i: usize = 0;
 
         while (true) {
             var size: c.mach_vm_size_t = 0;
@@ -59,26 +57,11 @@ pub const Scanner = struct {
                 continue;
             }
 
-            var changed_at: i64 = now;
-            while (prev_i < self.prev_regions.items.len) {
-                const prev = self.prev_regions.items[prev_i];
-                if (prev.base == address) {
-                    if (prev.size == size and prev.protection == info.protection) {
-                        changed_at = prev.changed_at;
-                    }
-                    break;
-                } else if (prev.base > address) {
-                    break;
-                }
-                prev_i += 1;
-            }
-
             self.next_regions.append(self.shared.allocator, state.MemoryRegion{
                 .base = address,
                 .size = size,
                 .protection = @intCast(info.protection),
                 .max_protection = @intCast(info.max_protection),
-                .changed_at = changed_at,
             }) catch |err| {
                 std.debug.print("OOM error in scanner: {}\n", .{err});
                 break;
@@ -112,10 +95,8 @@ pub const Scanner = struct {
 
             self.shared.vm_stats = state.VmStats{
                 .active = @as(u64, @intCast(vm_info.active_count)) * page,
-                .inactive = @as(u64, @intCast(vm_info.inactive_count)) * page,
                 .compressed = @as(u64, @intCast(vm_info.compressor_page_count)) * page,
                 .wired = @as(u64, @intCast(vm_info.wire_count)) * page,
-                .free = @as(u64, @intCast(vm_info.free_count)) * page,
             };
         }
     }
@@ -132,21 +113,21 @@ pub const Scanner = struct {
         );
 
         if (kern_return == c.KERN_SUCCESS) {
-            const rss: u64 = @intCast(task_info_data.resident_size);
-            const vms: u64 = @intCast(task_info_data.virtual_size);
+            const resident: u64 = @intCast(task_info_data.resident_size);
+            const virtual: u64 = @intCast(task_info_data.virtual_size);
 
-            if (self.prev_rss != 0) {
-                const rss_delta: f64 = @as(f64, @floatFromInt(rss)) - @as(f64, @floatFromInt(self.prev_rss));
-                const vms_delta: f64 = @as(f64, @floatFromInt(vms)) - @as(f64, @floatFromInt(self.prev_vms));
+            if (self.prev_resident != 0) {
+                const resident_delta: f64 = @as(f64, @floatFromInt(resident)) - @as(f64, @floatFromInt(self.prev_resident));
+                const virtual_delta: f64 = @as(f64, @floatFromInt(virtual)) - @as(f64, @floatFromInt(self.prev_virtual));
 
                 self.shared.mutex.lock();
                 defer self.shared.mutex.unlock();
-                self.shared.pushRssDelta(rss_delta);
-                self.shared.pushVmsDelta(vms_delta);
+                self.shared.pushResidentDelta(resident_delta);
+                self.shared.pushVirtualDelta(virtual_delta);
             }
 
-            self.prev_rss = rss;
-            self.prev_vms = vms;
+            self.prev_resident = resident;
+            self.prev_virtual = virtual;
         } else {
             self.shared.status.store(.target_lost, .release);
         }
