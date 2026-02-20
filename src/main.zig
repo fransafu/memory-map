@@ -55,7 +55,7 @@ pub fn main() !void {
     };
     std.debug.print("[INFO] Scanner thread started\n", .{});
 
-    var renderer = renderer_mod.TerminalRenderer.init(&shared, pid);
+    var renderer = renderer_mod.Renderer.init(&shared, pid);
     std.debug.print("[INFO] CLI dashboard starting\n", .{});
     renderer.run();
 
