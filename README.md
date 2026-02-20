@@ -29,3 +29,7 @@ sudo ./zig-out/bin/memory-map <pid>
 ```
 
 Note: look for the PID of the process you want to monitor using `ps aux | grep <process_name>`
+
+## License
+
+This project is licensed under the MIT License, see the [LICENSE](LICENSE) file for details.
